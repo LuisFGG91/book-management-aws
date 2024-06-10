@@ -1,0 +1,52 @@
+# Tipos
+type Author {
+  AuthorID: ID!
+  Nombre: String!
+  Apellidos: String!
+  FechaNacimiento: String
+  RUT: String
+  Libros: [Book]
+}
+
+type Book {
+  BookID: ID!
+  Codigo: String!
+  Nombre: String!
+  FechaEdicion: String
+  Author: Author
+  Generos: [Genre]
+}
+
+type Genre {
+  GenreID: ID!
+  Nombre: String!
+  Libros: [Book]
+}
+
+# Consultas
+type Query {
+  getBook(BookID: ID!): Book
+  listBooks: [Book]
+  getAuthor(AuthorID: ID!): Author
+  listAuthors: [Author]
+  getGenre(GenreID: ID!): Genre
+  listGenres: [Genre]
+}
+
+# Mutaciones
+type Mutation {
+  createBook(Codigo: String!, Nombre: String!, FechaEdicion: String, AuthorID: ID!): Book
+  updateBook(BookID: ID!, Codigo: String, Nombre: String, FechaEdicion: String, AuthorID: ID): Book
+  deleteBook(BookID: ID!): Book
+
+  createAuthor(Nombre: String!, Apellidos: String!, FechaNacimiento: String, RUT: String): Author
+  updateAuthor(AuthorID: ID!, Nombre: String, Apellidos: String, FechaNacimiento: String, RUT: String): Author
+  deleteAuthor(AuthorID: ID!): Author
+
+  createGenre(Nombre: String!): Genre
+  updateGenre(GenreID: ID!, Nombre: String): Genre
+  deleteGenre(GenreID: ID!): Genre
+
+  assignGenreToBook(BookID: ID!, GenreID: ID!): Book
+  removeGenreFromBook(BookID: ID!, GenreID: ID!): Book
+}

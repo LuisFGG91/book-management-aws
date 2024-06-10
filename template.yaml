@@ -1,0 +1,256 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: 'AWS::Serverless-2016-10-31'
+Description: >
+  Serverless API for managing books and authors.
+
+Globals:
+  Function:
+    Timeout: 10
+
+Resources:
+  BookManagementApiBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: book-management-api
+
+  BookTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: Books
+      AttributeDefinitions:
+        - AttributeName: BookID
+          AttributeType: S
+        - AttributeName: AuthorID
+          AttributeType: S
+      KeySchema:
+        - AttributeName: BookID
+          KeyType: HASH
+      ProvisionedThroughput:
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 5
+      GlobalSecondaryIndexes:
+        - IndexName: AuthorIndex
+          KeySchema:
+            - AttributeName: AuthorID
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+          ProvisionedThroughput:
+            ReadCapacityUnits: 5
+            WriteCapacityUnits: 5
+
+  AuthorTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: Authors
+      AttributeDefinitions:
+        - AttributeName: AuthorID
+          AttributeType: S
+      KeySchema:
+        - AttributeName: AuthorID
+          KeyType: HASH
+      ProvisionedThroughput:
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 5
+
+  GenreTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: Genres
+      AttributeDefinitions:
+        - AttributeName: GenreID
+          AttributeType: S
+      KeySchema:
+        - AttributeName: GenreID
+          KeyType: HASH
+      ProvisionedThroughput:
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 5
+
+  BookGenreTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: BookGenres
+      AttributeDefinitions:
+        - AttributeName: BookID
+          AttributeType: S
+        - AttributeName: GenreID
+          AttributeType: S
+      KeySchema:
+        - AttributeName: BookID
+          KeyType: HASH
+        - AttributeName: GenreID
+          KeyType: RANGE
+      ProvisionedThroughput:
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 5
+
+  ManageBooksFunction:
+      Type: AWS::Serverless::Function
+      Properties:
+        Handler: book-management-api/src/manage_books.handler
+        Runtime: python3.8
+        Environment:
+          Variables:
+            TABLE_NAME: !Ref BookTable
+        Policies:
+          - DynamoDBCrudPolicy:
+              TableName: !Ref BookTable
+        Events:
+          MyApi:
+            Type: Api
+            Properties:
+              Path: /manage-books
+              Method: post
+        Metadata:
+          'AWS::CloudFormation::Init':
+            config:
+              commands:
+                01_install_dependencies:
+                  command: 'pip install -r requirements.txt -t /var/task'
+        DependsOn: BookTable
+
+  ManageAuthorsFunction:
+      Type: AWS::Serverless::Function
+      Properties:
+        Handler: book-management-api/src/manage_authors.handler
+        Runtime: python3.8
+        Environment:
+          Variables:
+            TABLE_NAME: !Ref AuthorTable
+        Policies:
+          - DynamoDBCrudPolicy:
+              TableName: !Ref AuthorTable
+        # Instalación de dependencias
+        Metadata:
+          'AWS::CloudFormation::Init':
+            config:
+              commands:
+                01_install_dependencies:
+                  command: 'pip install -r requirements.txt -t /var/task'
+        DependsOn: AuthorTable
+
+  ManageGenresFunction:
+      Type: AWS::Serverless::Function
+      Properties:
+        Handler: book-management-api/src/manage_genres.handler
+        Runtime: python3.8
+        Environment:
+          Variables:
+            TABLE_NAME: !Ref GenreTable
+        Policies:
+          - DynamoDBCrudPolicy:
+              TableName: !Ref GenreTable
+        # Instalación de dependencias
+        Metadata:
+          'AWS::CloudFormation::Init':
+            config:
+              commands:
+                01_install_dependencies:
+                  command: 'pip install -r requirements.txt -t /var/task'
+        DependsOn: GenreTable
+
+  AssignGenresFunction:
+      Type: AWS::Serverless::Function
+      Properties:
+        Handler: book-management-api/src/assign_genres.handler
+        Runtime: python3.8
+        Environment:
+          Variables:
+            TABLE_NAME: !Ref BookGenreTable
+        Policies:
+          - DynamoDBCrudPolicy:
+              TableName: !Ref BookGenreTable
+        # Instalación de dependencias
+        Metadata:
+          'AWS::CloudFormation::Init':
+            config:
+              commands:
+                01_install_dependencies:
+                  command: 'pip install -r requirements.txt -t /var/task'
+        DependsOn: BookGenreTable
+
+
+    GraphQLApi:
+      Type: AWS::AppSync::GraphQLApi
+      Properties:
+        Name: BookManagementAPI
+        AuthenticationType: AMAZON_COGNITO_USER_POOLS
+        UserPoolConfig:
+          UserPoolId: !Ref CognitoUserPool
+
+    GraphQLSchema:
+      Type: AWS::AppSync::GraphQLSchema
+      Properties:
+        ApiId: !GetAtt GraphQLApi.ApiId
+        Definition: !Sub |
+          ${file(book-management-api/schema/schema.graphql)}
+
+    BookTableDataSource:
+      Type: AWS::AppSync::DataSource
+      Properties:
+        ApiId: !GetAtt GraphQLApi.ApiId
+        Name: BookTable
+        Type: AMAZON_DYNAMODB
+        DynamoDBConfig:
+          TableName: !Ref BookTable
+          AwsRegion: !Ref "AWS::Region"
+        ServiceRoleArn: !GetAtt AppSyncDynamoDBRole.Arn
+
+    AuthorTableDataSource:
+      Type: AWS::AppSync::DataSource
+      Properties:
+        ApiId: !GetAtt GraphQLApi.ApiId
+        Name: AuthorTable
+        Type: AMAZON_DYNAMODB
+        DynamoDBConfig:
+          TableName: !Ref AuthorTable
+          AwsRegion: !Ref "AWS::Region"
+        ServiceRoleArn: !GetAtt AppSyncDynamoDBRole.Arn
+
+    GenreTableDataSource:
+      Type: AWS::AppSync::DataSource
+      Properties:
+        ApiId: !GetAtt GraphQLApi.ApiId
+        Name: GenreTable
+        Type: AMAZON_DYNAMODB
+        DynamoDBConfig:
+          TableName: !Ref GenreTable
+          AwsRegion: !Ref "AWS::Region"
+        ServiceRoleArn: !GetAtt AppSyncDynamoDBRole.Arn
+
+    CreateBookResolver:
+      Type: AWS::AppSync::Resolver
+      Properties:
+        ApiId: !GetAtt GraphQLApi.ApiId
+        TypeName: Mutation
+        FieldName: createBook
+        DataSourceName: !GetAtt BookTableDataSource.Name
+        RequestMappingTemplate: |
+          {
+            "version": "2018-05-29",
+            "operation": "PutItem",
+            "key": {
+                "BookID": { "S": "$util.autoId()" }
+            },
+            "attributeValues": {
+                "Codigo": { "S": "$ctx.args.Codigo" },
+                "Nombre": { "S": "$ctx.args.Nombre" },
+                "FechaEdicion": { "S": "$ctx.args.FechaEdicion" },
+                "AuthorID": { "S": "$ctx.args.AuthorID" }
+            }
+          }
+        ResponseMappingTemplate: |
+          $util.toJson($ctx.result)
+
+Outputs:
+  GraphQLApiUrl:
+    Value: !GetAtt GraphQLApi.GraphQLUrl
+  CognitoUserPoolId:
+    Value: !Ref CognitoUserPool
+  BookTableName:
+    Value: !Ref BookTable
+  AuthorTableName:
+    Value: !Ref AuthorTable
+  GenreTableName:
+    Value: !Ref GenreTable

@@ -1,0 +1,56 @@
+{
+    "Comment": "Orquesta la eliminación de múltiples libros.",
+    "StartAt": "DeleteBooks",
+    "States": {
+        "DeleteBooks": {
+            "Type": "Task",
+            "Resource": "arn:aws:lambda:sa-east-1:637073230545:function:BatchDeleteBooks",
+            "Next": "CheckSuccess",
+            "Retry": [
+                {
+                    "ErrorEquals": [
+                        "States.ALL"
+                    ],
+                    "IntervalSeconds": 1,
+                    "MaxAttempts": 3,
+                    "BackoffRate": 2
+                }
+            ],
+            "Catch": [
+                {
+                    "ErrorEquals": [
+                        "States.ALL"
+                    ],
+                    "Next": "HandleError"
+                }
+            ]
+        },
+        "CheckSuccess": {
+            "Type": "Choice",
+            "Choices": [
+                {
+                    "Variable": "$.status",
+                    "StringEquals": "SUCCESS",
+                    "Next": "DeleteComplete"
+                },
+                {
+                    "Variable": "$.status",
+                    "StringEquals": "IN_PROGRESS",
+                    "Next": "WaitForCompletion"
+                }
+            ],
+            "Default": "HandleError"
+        },
+        "WaitForCompletion": {
+            "Type": "Wait",
+            "Seconds": 10,
+            "Next": "DeleteBooks"
+        },
+        "DeleteComplete": {
+            "Type": "Succeed"
+        },
+        "HandleError": {
+            "Type": "Fail"
+        }
+    }
+}
