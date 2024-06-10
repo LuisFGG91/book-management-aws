@@ -102,13 +102,13 @@ Resources:
             Properties:
               Path: /manage-books
               Method: post
-        Metadata:
+      Metadata:
           'AWS::CloudFormation::Init':
             config:
               commands:
                 01_install_dependencies:
                   command: 'pip install -r requirements.txt -t /var/task'
-        DependsOn: BookTable
+      DependsOn: BookTable
 
   ManageAuthorsFunction:
       Type: AWS::Serverless::Function
@@ -122,13 +122,13 @@ Resources:
           - DynamoDBCrudPolicy:
               TableName: !Ref AuthorTable
         # Instalación de dependencias
-        Metadata:
-          'AWS::CloudFormation::Init':
-            config:
-              commands:
-                01_install_dependencies:
-                  command: 'pip install -r requirements.txt -t /var/task'
-        DependsOn: AuthorTable
+      Metadata:
+        'AWS::CloudFormation::Init':
+          config:
+            commands:
+              01_install_dependencies:
+                command: 'pip install -r requirements.txt -t /var/task'
+      DependsOn: AuthorTable
 
   ManageGenresFunction:
       Type: AWS::Serverless::Function
@@ -142,13 +142,13 @@ Resources:
           - DynamoDBCrudPolicy:
               TableName: !Ref GenreTable
         # Instalación de dependencias
-        Metadata:
-          'AWS::CloudFormation::Init':
-            config:
-              commands:
-                01_install_dependencies:
-                  command: 'pip install -r requirements.txt -t /var/task'
-        DependsOn: GenreTable
+      Metadata:
+        'AWS::CloudFormation::Init':
+          config:
+            commands:
+              01_install_dependencies:
+                command: 'pip install -r requirements.txt -t /var/task'
+      DependsOn: GenreTable
 
   AssignGenresFunction:
       Type: AWS::Serverless::Function
@@ -162,14 +162,13 @@ Resources:
           - DynamoDBCrudPolicy:
               TableName: !Ref BookGenreTable
         # Instalación de dependencias
-        Metadata:
-          'AWS::CloudFormation::Init':
-            config:
-              commands:
-                01_install_dependencies:
-                  command: 'pip install -r requirements.txt -t /var/task'
-        DependsOn: BookGenreTable
-
+      Metadata:
+        'AWS::CloudFormation::Init':
+          config:
+            commands:
+              01_install_dependencies:
+                command: 'pip install -r requirements.txt -t /var/task'
+      DependsOn: BookGenreTable
 
     GraphQLApi:
       Type: AWS::AppSync::GraphQLApi
